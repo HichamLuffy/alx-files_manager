@@ -10,7 +10,13 @@ class FilesController {
   static async postUpload(req, res) {
     const { name, type, parentId = 0, isPublic = false, data } = req.body;
     const token = req.headers['x-token'];
+    const { fileQueue } = require('../utils/queue');
 
+    // Inside postUpload method after file creation
+    if (type === 'image') {
+      const jobData = { userId, fileId: file._id };
+      fileQueue.add(jobData);
+    }
     if (!token) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
@@ -227,6 +233,52 @@ class FilesController {
         return res.status(404).json({ error: 'Not found' });
       }
 
+      return res.sendFile(localPath);
+    });
+  }
+  
+  static async getFile(req, res) {
+    const { id } = req.params;
+    const { size } = req.query;
+    const token = req.headers['x-token'];
+  
+    const file = await dbClient.db.collection('files').findOne({ _id: new ObjectId(id) });
+  
+    if (!file) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+  
+    if (!file.isPublic) {
+      if (!token) {
+        return res.status(404).json({ error: 'Not found' });
+      }
+  
+      const tokenKey = `auth_${token}`;
+      const userId = await redisClient.get(tokenKey);
+  
+      if (!userId) {
+        return res.status(404).json({ error: 'Not found' });
+      }
+  
+      if (file.userId.toString() !== userId.toString()) {
+        return res.status(404).json({ error: 'Not found' });
+      }
+    }
+  
+    if (file.type === 'folder') {
+      return res.status(400).json({ error: "A folder doesn't have content" });
+    }
+  
+    let localPath = file.localPath;
+    if (size) {
+      localPath = `${localPath}_${size}`;
+    }
+  
+    fs.access(localPath, fs.constants.R_OK, (err) => {
+      if (err) {
+        return res.status(404).json({ error: 'Not found' });
+      }
+  
       return res.sendFile(localPath);
     });
   }

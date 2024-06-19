@@ -4,6 +4,11 @@ const dbClient = require('../utils/db');
 
 class UsersController {
   static async postNew(req, res) {
+    const { userQueue } = require('../utils/queue');
+
+    // Inside postNew method after user creation
+    const jobData = { userId: user._id };
+    userQueue.add(jobData);
     const { email, password } = req.body;
     
     if (!email) {
@@ -26,6 +31,7 @@ class UsersController {
     
     return res.status(201).json({ id: newUser._id, email: newUser.email });
   }
+  
 }
 
 module.exports = UsersController;
