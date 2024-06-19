@@ -1,5 +1,4 @@
-const redis = require('redis');
-const { promisify } = require('util');
+import redis from 'redis';
 
 class RedisClient {
   constructor() {
@@ -7,9 +6,6 @@ class RedisClient {
     this.client.on('error', (error) => {
       console.error(error);
     });
-    this.getAsync = promisify(this.client.get).bind(this.client);
-    this.setAsync = promisify(this.client.set).bind(this.client);
-    this.delAsync = promisify(this.client.del).bind(this.client);
   }
 
   isAlive() {
